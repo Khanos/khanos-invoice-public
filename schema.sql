@@ -8,7 +8,7 @@
 -- ============================================
 -- USERS TABLE (Authorization)
 -- ============================================
--- Stores authorized users who can access the app
+-- Stores accounts registered automatically after verified Google sign-in
 -- Only users in this table with is_active=true can log in
 
 CREATE TABLE IF NOT EXISTS users (
@@ -59,9 +59,10 @@ CREATE INDEX IF NOT EXISTS idx_invoices_user_id ON invoices(user_id);
 CREATE INDEX IF NOT EXISTS idx_invoices_created_at ON invoices(created_at DESC);
 
 -- ============================================
--- SEED DATA (Initial User)
+-- OPTIONAL SEED DATA (Initial Admin)
 -- ============================================
--- Replace with your actual user email before running
+-- Normal users register automatically; manual seeding is optional.
+-- Keep any real admin email and defaults outside tracked source.
 
 -- Example: Insert initial admin user
 -- INSERT INTO users (email, name, role, is_active)

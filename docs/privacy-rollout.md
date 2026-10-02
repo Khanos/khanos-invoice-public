@@ -14,7 +14,15 @@ No existing invoice or database record is deleted by this PR. Scoped legacy draf
 
 ## Verify the deployed application
 
-Use synthetic accounts/data to verify authorized sign-in, denied sign-in, saving/loading/deleting invoices, editing defaults, printing and logout. Disable an already signed-in test user and verify subsequent invoice/default operations are denied. Check that one account cannot load or modify another account's invoice. Confirm the public-facing deployment still requires authorization.
+Use synthetic accounts/data to verify first-time Google sign-in, repeat sign-in, saving/loading/deleting invoices, editing defaults, printing and logout. Disable an already signed-in test user and verify both new sign-ins and subsequent invoice/default operations are denied. Check that one account cannot load or modify another account's invoice or defaults. Confirm unauthenticated visitors cannot access invoice data.
+
+## Public Google registration
+
+Registration uses the existing `users` table; no schema migration or changes to existing invoices/defaults are needed. New verified Google emails are normalized and inserted with the `user` role. Existing identities, names, roles and disabled status are preserved, including legacy mixed-case email addresses. Concurrent sign-ins use the existing email uniqueness constraint and reread the account when another request wins the insert.
+
+Before deploying, set `NEXTAUTH_URL` to this deployment's canonical domain and register `<domain>/api/auth/callback/google` in Google Cloud. Use an External OAuth audience. The basic identity scopes requested by this app are exempt from Google's test-user restriction, including while the OAuth app is in Testing. Reusing environment variables from a different deployment also reuses its callback URL until this setting is changed.
+
+To roll back automatic registration, revert its source commit. Existing records are retained. The older allowlist code still admits accounts registered during the public-registration period because those active users now exist in the database; reverting does not revoke them. Disable individual accounts explicitly when revocation is desired.
 
 The old app version can be restored by reverting the source/dependency commit while the repository remains private. The database format is unchanged. Browser drafts already cleared at logout or tab close are not recoverable; database-saved invoices remain available.
 

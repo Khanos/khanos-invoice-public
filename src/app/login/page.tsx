@@ -109,7 +109,7 @@ function LoginContent() {
 
           {/* Footer */}
           <p className="mt-6 text-center text-xs text-gray-500">
-            {t("authorizedUsersOnly")}
+            {t("accountPrivacyNotice")}
           </p>
         </div>
       </div>

@@ -3,7 +3,7 @@ import "server-only";
 import type { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import { getServerSession } from "next-auth/next";
-import { getUserByEmail, getUserById } from "./db";
+import { getOrCreateGoogleUser, getUserByEmail, getUserById } from "./db";
 import { DbUser } from "@/types/database";
 
 /**
@@ -43,30 +43,31 @@ export const authOptions: NextAuthOptions = {
 
   callbacks: {
     /**
-     * Sign-in callback - validates user against database
-     * This runs BEFORE a session is created
-     * 
-     * Authorization flow:
-     * 1. Only Google sign-in allowed
-     * 2. User must exist in database
-     * 3. User must be active (is_active = true)
+     * Register verified Google accounts before creating a session.
+     * Existing disabled accounts remain blocked.
      */
-    async signIn({ user, account }) {
+    async signIn({ user, account, profile }) {
       // Only allow Google sign-in
       if (account?.provider !== "google") {
         return false;
       }
 
-      // Check if user exists in database and is active
-      if (!user.email) {
+      const email = user.email?.trim().toLowerCase();
+      if (
+        !email ||
+        !profile ||
+        !("email_verified" in profile) ||
+        profile.email_verified !== true ||
+        typeof profile.email !== "string" ||
+        profile.email.trim().toLowerCase() !== email
+      ) {
         return "/login?error=AccessDenied";
       }
 
-      const dbUser = await getUserByEmail(user.email);
+      const dbUser = await getOrCreateGoogleUser(email, user.name ?? null);
 
-      // User must exist in database (strict mode)
       if (!dbUser) {
-        return "/login?error=AccessDenied";
+        return "/login?error=RegistrationFailed";
       }
 
       // User must be active

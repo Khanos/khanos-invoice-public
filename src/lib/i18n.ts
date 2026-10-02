@@ -43,10 +43,10 @@ export const translations = {
     close: "Close",
 
     // Login Page
-    signInToAccess: "Sign in to access your private invoice tool",
+    signInToAccess: "Sign in with Google to create and manage your invoices",
     signInWithGoogle: "Sign in with Google",
-    authorizedUsersOnly: "Only authorized users can access this application",
-    accessDenied: "Access denied. Your email is not authorized to use this application.",
+    accountPrivacyNotice: "Anyone with a verified Google account can sign in. Your invoices are private to your account.",
+    accessDenied: "This account cannot sign in. Please use a verified, active Google account.",
     signInError: "An error occurred during sign in. Please try again.",
 
     // Invoice Form - Section Headers
@@ -146,10 +146,10 @@ export const translations = {
     close: "Cerrar",
 
     // Login Page
-    signInToAccess: "Inicia sesión para acceder a tu herramienta de facturas",
+    signInToAccess: "Inicia sesión con Google para crear y gestionar tus facturas",
     signInWithGoogle: "Iniciar sesión con Google",
-    authorizedUsersOnly: "Solo los usuarios autorizados pueden acceder a esta aplicación",
-    accessDenied: "Acceso denegado. Tu correo electrónico no está autorizado para usar esta aplicación.",
+    accountPrivacyNotice: "Cualquier persona con una cuenta de Google verificada puede iniciar sesión. Tus facturas son privadas para tu cuenta.",
+    accessDenied: "No se puede iniciar sesión con esta cuenta. Usa una cuenta de Google verificada y activa.",
     signInError: "Ocurrió un error durante el inicio de sesión. Por favor, inténtalo de nuevo.",
 
     // Invoice Form - Section Headers

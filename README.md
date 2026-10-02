@@ -8,10 +8,12 @@ An invoice editor with English/Spanish controls, live A4 preview, browser print/
 2. Run `npm ci`.
 3. Copy `.env.example` to `.env.local` and configure Google OAuth, a strong `NEXTAUTH_SECRET`, the application URL and a Postgres connection. Generate your own secret with `openssl rand -base64 32`.
 4. Configure the Google OAuth callback URL as `<application URL>/api/auth/callback/google`.
-5. Run `schema.sql` against your own database and add authorized users privately. Only active users in the `users` table can access invoice operations.
+5. Run `schema.sql` against your own database. Verified Google accounts register automatically on first sign-in; no email allowlist is required. Existing disabled accounts remain blocked.
 6. Run `npm run dev` and open http://localhost:3000.
 
 Credentials and personal invoice defaults belong in private environment configuration and the database. The committed schema and examples contain placeholder data only.
+
+For public Google sign-in, configure the OAuth app's audience as **External** in Google Auth Platform. This app requests only the basic `openid email profile` scopes, which Google exempts from the Testing status's test-user restriction. Each deployment needs its own `NEXTAUTH_URL` and matching authorized redirect URI; importing another project's variables does not update these URLs automatically. See [Google audience settings](https://support.google.com/cloud/answer/15549945) and [Google sign-in configuration](https://next-auth.js.org/providers/google).
 
 ## Commands
 
@@ -23,10 +25,11 @@ npm audit
 npm run start
 ```
 
-The security tests execute TypeScript with synthetic auth/database/storage imports. They check revoked-user access, owner-scoped operations, bounded write validation, totals, draft migration and safe error logging. They do not call Google or a database; deployed sign-in and database smoke checks remain necessary before release.
+The security tests execute TypeScript with synthetic auth/database/storage imports. They check public registration, verified Google identity, repeat sign-in, disabled-user access, owner-scoped operations, bounded write validation, totals, draft migration and safe error logging. They do not call Google or a database; deployed sign-in and database smoke checks remain necessary before release.
 
 ## Privacy behavior
 
+- Verified Google accounts receive their own `user` record. Repeat sign-in reuses that identity without changing existing roles or reactivating disabled accounts.
 - Each protected operation verifies that the current database user is still active and matches the session identity.
 - Invoice/default writes validate known fields and recalculate totals from line items.
 - Unsaved drafts live in `sessionStorage`, scoped to the user ID, and expire with the tab. Use **Save invoice** to retain work in the database.

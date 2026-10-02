@@ -29,6 +29,7 @@ function harness(user, session = { user: { id: 7, email: 'reviewer@example.com' 
     getServerSession: async () => session,
     getUserById: async id => { calls.push(['authorization', id]); return user; },
     getUserByEmail: async () => user,
+    getOrCreateGoogleUser: async () => user,
   }, ['authOptions', 'getCurrentUserId', 'getCurrentUser']);
   const actions = load('src/app/actions/invoice.ts', {
     ...validation,
@@ -93,7 +94,95 @@ test('JWT updates remove revoked identity instead of retaining authorization', a
   const token = await auth.authOptions.callbacks.jwt({ token: { userId: 7, role: 'user', email: active.email }, trigger: 'update' });
   assert.equal(token.userId, undefined);
   assert.equal(token.role, undefined);
-  assert.equal(await auth.authOptions.callbacks.signIn({ user: { email: active.email }, account: { provider: 'google' } }), '/login?error=AccessDenied');
+  assert.equal(await auth.authOptions.callbacks.signIn({ user: { email: active.email }, account: { provider: 'google' }, profile: { email: active.email, email_verified: true } }), '/login?error=AccessDenied');
+});
+
+function registrationHarness(sql) {
+  const db = load('src/lib/db.ts', { sql, logServerError: () => {} }, ['getOrCreateGoogleUser', 'getUserByEmail']);
+  const auth = load('src/lib/auth.ts', {
+    ...db, GoogleProvider: options => options,
+    getServerSession: async () => null, getUserById: async () => null,
+  }, ['authOptions']);
+  return { ...db, auth: auth.authOptions.callbacks };
+}
+const googleSignIn = (email = 'new@example.com', profile = { email, email_verified: true }) => ({
+  user: { email, name: 'New User' }, account: { provider: 'google' }, profile,
+});
+
+test('new verified Google accounts register and receive their own database identity', async () => {
+  const calls = [];
+  const newUser = { ...active, id: 8, email: 'new@example.com' };
+  const { auth } = registrationHarness(async (strings, ...values) => {
+    calls.push({ query: strings.join('?'), values });
+    return { rows: [newUser] };
+  });
+  assert.equal(await auth.signIn(googleSignIn('New@Example.com')), true);
+  assert.match(calls[0].query, /INSERT INTO users/);
+  assert.match(calls[0].query, /'user', true/);
+  assert.match(calls[0].query, /WHERE NOT EXISTS/);
+  assert.match(calls[0].query, /ON CONFLICT \(email\) DO NOTHING/);
+  assert.deepEqual(calls[0].values, ['new@example.com', 'New User', 'new@example.com']);
+  const token = await auth.jwt({ token: { email: newUser.email }, user: { email: newUser.email } });
+  assert.equal(token.userId, 8);
+  assert.equal(token.role, 'user');
+  const session = await auth.session({ session: { user: {} }, token });
+  assert.equal(session.user.id, 8);
+});
+
+test('unverified, missing, mismatched and non-Google identities cannot register', async () => {
+  let writes = 0;
+  const { auth } = registrationHarness(async () => { writes++; return { rows: [] }; });
+  for (const profile of [undefined, {}, { email: 'new@example.com', email_verified: false },
+    { email: 'new@example.com', email_verified: 'true' }, { email: 'other@example.com', email_verified: true }]) {
+    const input = googleSignIn(); input.profile = profile;
+    assert.equal(await auth.signIn(input), '/login?error=AccessDenied');
+  }
+  const missingEmail = googleSignIn(); missingEmail.user.email = null;
+  assert.equal(await auth.signIn(missingEmail), '/login?error=AccessDenied');
+  const otherProvider = googleSignIn(); otherProvider.account.provider = 'other';
+  assert.equal(await auth.signIn(otherProvider), false);
+  assert.equal(writes, 0);
+});
+
+test('repeat or concurrent sign-ins reuse existing accounts without changing roles or status', async () => {
+  const existing = { ...active, role: 'admin', email: 'New@Example.com' };
+  const calls = [];
+  const { auth } = registrationHarness(async (strings, ...values) => {
+    const query = strings.join('?'); calls.push({ query, values });
+    return { rows: query.includes('INSERT') ? [] : [existing] };
+  });
+  const outcomes = await Promise.all([auth.signIn(googleSignIn()), auth.signIn(googleSignIn())]);
+  assert.deepEqual(outcomes, [true, true]);
+  const token = await auth.jwt({ token: { email: 'new@example.com' }, user: { email: 'new@example.com' } });
+  assert.equal(token.userId, existing.id);
+  assert.equal(token.role, 'admin');
+  assert.ok(calls.every(c => !/UPDATE|DELETE/.test(c.query)));
+});
+
+test('public registration never reactivates an existing disabled account', async () => {
+  const disabled = { ...active, email: 'NEW@example.com', is_active: false };
+  const { auth } = registrationHarness(async strings => ({ rows: strings.join('').includes('INSERT') ? [] : [disabled] }));
+  assert.equal(await auth.signIn(googleSignIn()), '/login?error=AccessDenied');
+});
+
+test('registration database failures return a retryable sign-in error without issuing a session', async () => {
+  const { auth } = registrationHarness(async () => { throw new Error('Synthetic database failure'); });
+  assert.equal(await auth.signIn(googleSignIn()), '/login?error=RegistrationFailed');
+});
+
+test('new accounts retain their own scope across every invoice and defaults operation', async () => {
+  const user = { ...active, id: 8, email: 'new@example.com' };
+  const { actions, routes, calls } = harness(user, { user: { id: 8, email: user.email } });
+  await actions.saveInvoiceAction(fixture());
+  await actions.saveInvoiceAction(fixture(), 99);
+  await actions.getInvoicesAction();
+  await actions.loadInvoiceAction(99);
+  await actions.deleteInvoiceAction(99);
+  await routes.GET();
+  await routes.PUT({ json: async () => fixture() });
+  for (const call of calls.filter(c => c[0] !== 'authorization')) {
+    assert.equal(call[['update', 'load', 'delete'].includes(call[0]) ? 2 : 1], 8);
+  }
 });
 
 test('validated writes recompute totals and strip unknown nested fields', async () => {
