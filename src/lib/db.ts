@@ -32,6 +32,32 @@ export async function getUserByEmail(email: string): Promise<DbUser | null> {
   }
 }
 
+/** Register a Google account without changing an existing identity or status. */
+export async function getOrCreateGoogleUser(
+  email: string,
+  name: string | null
+): Promise<DbUser | null> {
+  const normalizedEmail = email.trim().toLowerCase();
+  if (!normalizedEmail || normalizedEmail.length > 320) return null;
+
+  try {
+    const { rows } = await sql<DbUser>`
+      INSERT INTO users (email, name, role, is_active)
+      SELECT ${normalizedEmail}, ${name?.trim().slice(0, 320) || null}, 'user', true
+      WHERE NOT EXISTS (
+        SELECT 1 FROM users WHERE LOWER(email) = ${normalizedEmail}
+      )
+      ON CONFLICT (email) DO NOTHING
+      RETURNING id, email, name, role, is_active, created_at
+    `;
+    // A separate read also handles a concurrent sign-in winning the insert.
+    return rows[0] ?? await getUserByEmail(normalizedEmail);
+  } catch (error) {
+    logServerError("Error registering Google user:", error);
+    return null;
+  }
+}
+
 /**
  * Check if a user is allowed to access the application
  * @param email - User's email address
