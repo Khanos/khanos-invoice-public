@@ -32,6 +32,34 @@ export async function getUserByEmail(email: string): Promise<DbUser | null> {
   }
 }
 
+/** Register a verified Google account without changing existing access or data. */
+export async function getOrCreateGoogleUser(
+  email: string,
+  name: string | null
+): Promise<DbUser | null> {
+  const normalizedEmail = email.trim().toLowerCase();
+  try {
+    const existing = await sql<DbUser>`
+      SELECT id, email, name, role, is_active, created_at
+      FROM users
+      WHERE LOWER(email) = ${normalizedEmail}
+    `;
+    if (existing.rows[0]) return existing.rows[0];
+
+    const { rows } = await sql<DbUser>`
+      INSERT INTO users (email, name, role, is_active)
+      VALUES (${normalizedEmail}, ${name}, 'user', true)
+      ON CONFLICT (email) DO NOTHING
+      RETURNING id, email, name, role, is_active, created_at
+    `;
+    // Concurrent first sign-ins must reuse the same account and private records.
+    return rows[0] ?? await getUserByEmail(normalizedEmail);
+  } catch (error) {
+    logServerError("Error registering Google user:", error);
+    return null;
+  }
+}
+
 /**
  * Check if a user is allowed to access the application
  * @param email - User's email address

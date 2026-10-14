@@ -6,44 +6,44 @@ import { generateId } from "./utils";
 /**
  * User-specific default invoice data
  * 
- * This file provides placeholder defaults for new users.
+ * This file provides empty defaults for new users.
  * Personalized defaults are stored in the database (user_defaults table)
  * and fetched via the API route.
  */
 
 /**
  * Placeholder defaults for new/unknown users
- * Contains helpful placeholder text to guide users
+ * Personal text is loaded only from the current account's database record.
  */
 export const placeholderDefaults: InvoiceData = {
-  title: "INVOICE",
-  invoiceNumber: "2026-01-001",
+  title: "",
+  invoiceNumber: "",
   issueDate: new Date().toISOString().split("T")[0],
   dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
     .toISOString()
     .split("T")[0],
 
   seller: {
-    name: "Your Name",
-    address: "Your Address",
-    taxId: "Your Tax ID",
-    email: "your@email.com",
-    phone: "+1 000 000 0000",
+    name: "",
+    address: "",
+    taxId: "",
+    email: "",
+    phone: "",
     website: "",
   },
 
   client: {
-    companyName: "Client Company Name",
-    address: "Client Address",
-    country: "Client Country",
-    email: "client@email.com",
-    phone: "+1 000 000 0000",
+    companyName: "",
+    address: "",
+    country: "",
+    email: "",
+    phone: "",
   },
 
   lineItems: [
     {
       id: generateId(),
-      description: "Description of services or products provided",
+      description: "",
       amountUSD: 0,
       amountEUR: 0,
     },

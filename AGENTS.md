@@ -14,7 +14,7 @@ Heed deprecation notices.
 
 ## Project Overview
 
-An access-controlled invoice generator with public source, real-time preview and browser print/PDF export.
+An invoice generator with public Google registration, private per-account data, real-time preview and browser print/PDF export.
 - **Framework:** Next.js 16.3.8 (App Router)
 - **React:** 19.2.8
 - **Language:** TypeScript 5
@@ -208,8 +208,8 @@ try {
 
 ### Authorization Flow
 1. User signs in with Google
-2. `signIn` callback checks if user exists in `users` table
-3. If user exists and `is_active = true`, login succeeds
+2. `signIn` verifies Google's email and registers new accounts in `users`
+3. Existing identities and roles are preserved; disabled accounts remain blocked
 4. JWT token is enriched with `userId` and `role` from database
 5. Session contains user info without requiring additional DB calls
 
@@ -257,6 +257,7 @@ See `schema.sql` for full SQL schema.
 ```typescript
 // User functions
 getUserByEmail(email)        // Get user by email
+getOrCreateGoogleUser(email, name) // Register or reuse a verified Google account
 isUserAllowed(email)         // Check if user can log in
 getUserById(id)              // Get user by ID
 
@@ -276,6 +277,7 @@ deleteInvoice(id, userId)      // Delete invoice
 - All queries use parameterized SQL (via tagged templates)
 - User isolation enforced at query level (all queries include `user_id`)
 - Session checked in every server action
+- Defaults are loaded and saved using the authenticated account ID. Accounts without saved defaults start with empty text; personal templates belong only in that account's `user_defaults` record.
 
 ---
 

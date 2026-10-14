@@ -3,7 +3,7 @@ import "server-only";
 import type { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import { getServerSession } from "next-auth/next";
-import { getUserByEmail, getUserById } from "./db";
+import { getOrCreateGoogleUser, getUserByEmail, getUserById } from "./db";
 import { DbUser } from "@/types/database";
 
 /**
@@ -43,28 +43,38 @@ export const authOptions: NextAuthOptions = {
 
   callbacks: {
     /**
-     * Sign-in callback - validates user against database
+     * Sign-in callback - registers verified Google accounts
      * This runs BEFORE a session is created
      * 
      * Authorization flow:
      * 1. Only Google sign-in allowed
-     * 2. User must exist in database
+     * 2. Google must verify the account email
      * 3. User must be active (is_active = true)
      */
-    async signIn({ user, account }) {
+    async signIn({ user, account, profile }) {
       // Only allow Google sign-in
       if (account?.provider !== "google") {
         return false;
       }
 
-      // Check if user exists in database and is active
-      if (!user.email) {
+      // Use the verified provider identity, never a client-supplied email.
+      if (
+        !user.email?.trim() ||
+        !profile ||
+        !("email_verified" in profile) ||
+        profile.email_verified !== true ||
+        typeof profile.email !== "string" ||
+        profile.email.trim().toLowerCase() !== user.email.trim().toLowerCase()
+      ) {
         return "/login?error=AccessDenied";
       }
 
-      const dbUser = await getUserByEmail(user.email);
+      const dbUser = await getOrCreateGoogleUser(
+        user.email,
+        user.name?.slice(0, 200) ?? null
+      );
 
-      // User must exist in database (strict mode)
+      // Database failures deny access; existing disabled accounts stay disabled.
       if (!dbUser) {
         return "/login?error=AccessDenied";
       }

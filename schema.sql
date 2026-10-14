@@ -8,8 +8,8 @@
 -- ============================================
 -- USERS TABLE (Authorization)
 -- ============================================
--- Stores authorized users who can access the app
--- Only users in this table with is_active=true can log in
+-- Verified Google accounts register here on first sign-in
+-- Existing accounts with is_active=false remain blocked
 
 CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,

@@ -34,8 +34,9 @@ export async function PUT(request: Request) {
     } catch {
       return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
     }
-    const data = parseInvoiceData(body);
-    if (!data) {
+    // Templates can have empty metadata; saved invoices still require it.
+    const data = parseInvoiceData(body, true);
+    if (!data || data.exchangeRate <= 0) {
       return NextResponse.json({ error: "Invalid invoice defaults" }, { status: 400 });
     }
     if (!(await saveUserDefaults(user.id, data))) {
