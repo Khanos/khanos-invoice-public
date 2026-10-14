@@ -77,6 +77,7 @@ function InvoiceWorkspace({ userId, email }: { userId: number; email: string }) 
   const [invoiceData, setInvoiceData] = useState<InvoiceData>(emptyState);
   const [isLoaded, setIsLoaded] = useState(false);
   const [currentInvoiceId, setCurrentInvoiceId] = useState<number | null>(null);
+  const [invoiceListVersion, setInvoiceListVersion] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   const [isDefaultsModalOpen, setIsDefaultsModalOpen] = useState(false);
   const invoiceRef = useRef<HTMLDivElement>(null);
@@ -192,6 +193,7 @@ function InvoiceWorkspace({ userId, email }: { userId: number; email: string }) 
       const result = await saveInvoiceAction(invoiceData, currentInvoiceId ?? undefined);
       if (result.success && result.id) {
         setCurrentInvoiceId(result.id);
+        setInvoiceListVersion((version) => version + 1);
       } else {
         console.error("Save failed:", result.error);
       }
@@ -271,6 +273,7 @@ function InvoiceWorkspace({ userId, email }: { userId: number; email: string }) 
         centerContent={
           <InvoiceSelector
             currentInvoiceId={currentInvoiceId}
+            refreshVersion={invoiceListVersion}
             onSelect={handleLoadInvoice}
             onNew={handleNewInvoice}
             onInvoiceDeleted={handleInvoiceDeleted}

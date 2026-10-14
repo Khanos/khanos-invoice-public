@@ -8,6 +8,7 @@ import { useTranslation } from "@/hooks/useTranslation";
 
 interface InvoiceSelectorProps {
   currentInvoiceId: number | null;
+  refreshVersion: number;
   onSelect: (data: InvoiceData, id: number) => void;
   onNew: () => void;
   onInvoiceDeleted?: () => void;
@@ -15,6 +16,7 @@ interface InvoiceSelectorProps {
 
 export default function InvoiceSelector({
   currentInvoiceId,
+  refreshVersion,
   onSelect,
   onNew,
   onInvoiceDeleted,
@@ -25,22 +27,24 @@ export default function InvoiceSelector({
   const [isOpen, setIsOpen] = useState(false);
   const [loadingId, setLoadingId] = useState<number | null>(null);
 
-  // Fetch invoices on mount
+  // Fetch invoices on mount and after every successful save.
   useEffect(() => {
+    let cancelled = false;
     async function fetchInvoices() {
       setIsLoading(true);
       try {
         const data = await getInvoicesAction();
-        setInvoices(data);
+        if (!cancelled) setInvoices(data);
       } catch (error) {
         console.error("Error fetching invoices:", error);
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     }
 
     fetchInvoices();
-  }, []);
+    return () => { cancelled = true; };
+  }, [refreshVersion]);
 
   const handleSelect = async (invoice: InvoiceSummary) => {
     setLoadingId(invoice.id);
