@@ -71,7 +71,7 @@ CREATE INDEX IF NOT EXISTS idx_invoices_created_at ON invoices(created_at DESC);
 -- INSERT INTO user_defaults (user_id, defaults_json)
 -- SELECT id, '{
 --   "title": "FACTURA",
---   "invoiceNumber": "2025-01-001",
+--   "invoiceNumber": "2026-01-001",
 --   ...
 -- }'::jsonb
 -- FROM users

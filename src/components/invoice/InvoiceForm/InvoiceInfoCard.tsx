@@ -28,7 +28,7 @@ export default function InvoiceInfoCard({ data, onUpdate }: InvoiceInfoCardProps
           label={t("invoiceNumber")}
           value={data.invoiceNumber}
           onChange={(e) => onUpdate("invoiceNumber", e.target.value)}
-          placeholder="2025-01-A"
+          placeholder="2026-01-A"
         />
         <Input
           label={t("issueDate")}

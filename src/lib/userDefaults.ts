@@ -17,7 +17,7 @@ import { generateId } from "./utils";
  */
 export const placeholderDefaults: InvoiceData = {
   title: "INVOICE",
-  invoiceNumber: "2025-01-001",
+  invoiceNumber: "2026-01-001",
   issueDate: new Date().toISOString().split("T")[0],
   dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
     .toISOString()
